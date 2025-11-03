@@ -1,1 +1,9 @@
 1)git pull https://github.com/savaseeratesli/PipelineExamples.git
+
+$ fly -t tutorial set-pipeline -p pipelineexamples -c pipeline.yml
+
+$ fly -t tutorial unpause-pipeline -p pipelineexamples
+
+$ fly -t tutorial trigger-job --job pipelineexamples/pipelineexamples-job --watch
+
+docker run -d -p 9090:9090 --name pipelineexamplesPipelineExamp savaseeratesli/test:latest

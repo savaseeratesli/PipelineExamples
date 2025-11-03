@@ -28,9 +28,9 @@ jobs:
           - |
             cd app-repo
             echo "🔹 Docker imaji oluşturuluyor..."
-            docker build -t savaseeratesli/test:latest .
+            docker build -t savaseeratesli/test:v1 .
             echo "🔹 DockerHub push ediliyor..."
-            docker push savaseeratesli/test:latest
+            docker push savaseeratesli/test:v1
 
 - name: deploy-to-k8s
   plan:
