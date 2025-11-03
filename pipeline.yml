@@ -27,9 +27,9 @@ jobs:
           - -exc
           - |
             cd app-repo
-            echo "🔹 Docker imajı oluşturuluyor..."
+            echo "🔹 Docker imaji oluşturuluyor..."
             docker build -t savaseeratesli/test:latest .
-            echo "🔹 DockerHub login bilgisi kullanılmadan push ediliyor..."
+            echo "🔹 DockerHub push ediliyor..."
             docker push savaseeratesli/test:latest
 
 - name: deploy-to-k8s
@@ -55,7 +55,7 @@ jobs:
           - -exc
           - |
             cd app-repo
-            echo "🔹 Kubernetes manifestleri uygulanıyor..."
+            echo "🔹 Kubernetes manifestleri uygulaniyor..."
             kubectl apply -f deployment.yml
             kubectl apply -f service.yml
             kubectl apply -f hpa.yml
