@@ -1,0 +1,61 @@
+resources:
+- name: app-repo
+  type: git
+  source:
+    uri: https://github.com/savaseeratesli/PipelineExamples.git
+    branch: main
+
+jobs:
+- name: build-and-push
+  plan:
+  - get: app-repo
+    trigger: true
+
+  - task: build-docker
+    privileged: true
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: docker
+      inputs:
+      - name: app-repo
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cd app-repo
+            echo "🔹 Docker imajı oluşturuluyor..."
+            docker build -t savaseeratesli/test:latest .
+            echo "🔹 DockerHub login bilgisi kullanılmadan push ediliyor..."
+            docker push savaseeratesli/test:latest
+
+- name: deploy-to-k8s
+  plan:
+  - get: app-repo
+    trigger: true
+    passed: [build-and-push]
+
+  - task: apply-k8s
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source:
+          repository: bitnami/kubectl
+      inputs:
+      - name: app-repo
+      params:
+        KUBECONFIG: ((kubeconfig))
+      run:
+        path: sh
+        args:
+          - -exc
+          - |
+            cd app-repo
+            echo "🔹 Kubernetes manifestleri uygulanıyor..."
+            kubectl apply -f deployment.yml
+            kubectl apply -f service.yml
+            kubectl apply -f hpa.yml
