@@ -1,9 +1,6 @@
 1)git pull https://github.com/savaseeratesli/PipelineExamples.git
 
 
-
-
-
 $ fly -t tutorial set-pipeline -p pipelineexample -c pipeline.yml -l vars.yml
 
 $ fly -t tutorial unpause-pipeline -p pipelineexample
