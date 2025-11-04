@@ -1,3 +1,10 @@
+resources:
+- name: app-repo
+  type: git
+  source:
+    uri: https://github.com/savaseeratesli/PipelineExamples.git
+    branch: main
+
 jobs:
   - name: build-and-push
     plan:
