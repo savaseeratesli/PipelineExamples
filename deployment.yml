@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: hello-world
-        image: savaseeratesli/test:v1
+        image: savaseeratesli/simple-image:latest
         ports:
         - containerPort: 9090
         resources:
