@@ -1,61 +1,46 @@
 resources:
-- name: app-repo
-  type: git
-  source:
-    uri: https://github.com/savaseeratesli/PipelineExamples.git
-    branch: main
+  # Git repo (senin PipelineExamples projen)
+  - name: pipelineexamples
+    type: git
+    icon: github
+    source:
+      uri: https://github.com/savaseeratesli/PipelineExamples.git
+      branch: main
+
+  # Docker imajını push edeceğin hedef (Docker Hub)
+  - name: simple-image
+    type: registry-image
+    icon: docker
+    source:
+      repository: savaseeratesli/simple-image
+      tag: latest
 
 jobs:
-- name: build-and-push
-  plan:
-  - get: app-repo
-    trigger: true
+  - name: build-and-push
+    plan:
+      - get: pipelineexamples
+        trigger: true
 
-  - task: build-docker
-    privileged: true
-    config:
-      platform: linux
-      image_resource:
-        type: registry-image
-        source:
-          repository: docker
-      inputs:
-      - name: app-repo
-      run:
-        path: sh
-        args:
-          - -exc
-          - |
-            cd app-repo
-            echo "🔹 Docker imaji oluşturuluyor..."
-            docker build -t savaseeratesli/test:v1 .
-            echo "🔹 DockerHub push ediliyor..."
-            docker push savaseeratesli/test:v1
+      # Docker imajını build et
+      - task: build-dotnet-image
+        privileged: true
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: concourse/oci-build-task
+          inputs:
+            - name: pipelineexamples
+          outputs:
+            - name: image
+          params:
+            CONTEXT: pipelineexamples
+            DOCKERFILE: pipelineexamples/Dockerfile
+          run:
+            path: build
 
-- name: deploy-to-k8s
-  plan:
-  - get: app-repo
-    trigger: true
-    passed: [build-and-push]
-
-  - task: apply-k8s
-    config:
-      platform: linux
-      image_resource:
-        type: registry-image
-        source:
-          repository: bitnami/kubectl
-      inputs:
-      - name: app-repo
-      params:
-        KUBECONFIG: ((kubeconfig))
-      run:
-        path: sh
-        args:
-          - -exc
-          - |
-            cd app-repo
-            echo "🔹 Kubernetes manifestleri uygulaniyor..."
-            kubectl apply -f deployment.yml
-            kubectl apply -f service.yml
-            kubectl apply -f hpa.yml
+      # Docker imajını push et
+      - put: simple-image
+        params:
+          image: image/image.tar

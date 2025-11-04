@@ -1,9 +1,29 @@
 1)git pull https://github.com/savaseeratesli/PipelineExamples.git
 
-$ fly -t tutorial set-pipeline -p pipelineexamples -c pipeline.yml
 
-$ fly -t tutorial unpause-pipeline -p pipelineexamples
 
-$ fly -t tutorial trigger-job --job pipelineexamples/pipelineexamples-job --watch
+
+
+$ fly -t tutorial set-pipeline -p pipelineexample -c pipeline.yml
+
+$ fly -t tutorial unpause-pipeline -p pipelineexample
+
+$ fly -t tutorial trigger-job --job pipelineexamples/build-and-push --watch
+
+deploy-to-k8s
+
+
+
+
+$ fly -t tutorial set-pipeline -p hello-world -c hello-world.yml
+# pipelines are paused when first created
+$ fly -t tutorial unpause-pipeline -p hello-world
+# trigger the job and watch it run to completion
+$ fly -t tutorial trigger-job --job hello-world/hello-world-job --watch
+
+
+
 
 docker run -d -p 9090:9090 --name pipelineexamplesPipelineExamp savaseeratesli/test:latest
+
+fly -t tutorial destroy-pipeline -p test1
