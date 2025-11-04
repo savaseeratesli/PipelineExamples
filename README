@@ -13,9 +13,15 @@ $ fly -t tutorial trigger-job --job pipelineexample/build-and-push --watch
 fly -t tutorial trigger-job --job pipelineexample/deploy-to-k8s --watch
 
 -------------------------------------------------------------------------------
-fly -t tutorial set-pipeline -p pipelineexample -c pipeline.yml -l vars.yml
+fly -t tutorial set-pipeline -p pipelinek8s -c pipelinek8s.yml -l vars.yml
 
-fly -t tutorial destroy-pipeline -p pipelineexample
+
+fly -t tutorial unpause-pipeline -p pipelinek8s
+
+fly -t tutorial trigger-job --job pipelinek8s/deploy-to-k8s --watch
+
+
+fly -t tutorial destroy-pipeline -p pipelinek8s
 ------------------------------------------------------------------------------
 
 docker run -d -p 9090:9090 --name simple-image savaseeratesli/simple-image:latest
