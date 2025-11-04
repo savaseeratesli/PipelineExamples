@@ -1,0 +1,43 @@
+resources:
+  # --- 1. GitHub kod deposu ---
+  - name: app-repo
+    type: git
+    source:
+      uri: https://github.com/savaseeratesli/PipelineExamples.git
+      branch: main
+
+jobs:
+  # --- JOB 1: Kubernetes'e deploy et ---
+  - name: deploy-to-kubernetes
+    plan:
+      - get: app-repo
+        trigger: true
+
+      - task: deploy
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: bitnami/kubectl
+              tag: latest
+          inputs:
+            - name: app-repo
+          params:
+            KUBE_CONFIG: ((kubeconfig))
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                echo "🚀 Deploying to Kubernetes..."
+
+                mkdir -p ~/.kube
+                echo "$KUBE_CONFIG" > ~/.kube/config
+
+                echo "🔍 Applying Deployment, Service and HPA..."
+                kubectl apply -f app-repo/deployment.yml
+                kubectl apply -f app-repo/service.yml
+                kubectl apply -f app-repo/hpa.yml
+
+                echo "✅ Deployment completed!"
