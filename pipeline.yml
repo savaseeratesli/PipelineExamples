@@ -1,12 +1,12 @@
 resources:
-  # --- 1. GitHub repository ---
+  # --- 1. Kaynak kod deposu (GitHub) ---
   - name: app-repo
     type: git
     source:
       uri: https://github.com/savaseeratesli/PipelineExamples.git
       branch: main
 
-  # --- 2. Docker image ---
+  # --- 2. Docker image kaynağı ---
   - name: simple-image
     type: docker-image
     source:
@@ -23,14 +23,17 @@ jobs:
         trigger: true
       - put: simple-image
         params:
-          build: app-repo
+          build: app-repo   # app-repo dizinindeki Dockerfile kullanılacak
 
-  # --- JOB 2: Kubernetes deploy ---
+  # --- JOB 2: Kubernetes'e deploy et ---
   - name: deploy-to-kubernetes
     plan:
       - get: app-repo
-        trigger: true
-        passed: [build-and-push]
+        trigger: false
+        passed: [build-and-push]   # ✅ build job tamamlanınca çalışır
+      - get: simple-image
+        trigger: false
+
       - task: deploy
         config:
           platform: linux
@@ -48,10 +51,17 @@ jobs:
             args:
               - -exc
               - |
-                echo "$KUBE_CONFIG" > /root/.kube/config
-                cd app-repo
-                echo "🔹 Deploying to Kubernetes..."
-                kubectl apply -f deployment.yml
-                kubectl apply -f service.yml
-                kubectl apply -f hpa.yml
-                echo "✅ Deployment complete!"
+                echo "🚀 Deploying to Kubernetes..."
+
+                mkdir -p ~/.kube
+                echo "$KUBE_CONFIG" > ~/.kube/config
+
+                echo "🔍 Applying Deployment, Service and HPA..."
+                kubectl apply -f app-repo/deployment.yml
+                kubectl apply -f app-repo/service.yml
+                kubectl apply -f app-repo/hpa.yml
+
+                echo "♻️ Restarting Deployment to pull latest image..."
+                kubectl rollout restart deployment/hello-world
+
+                echo "✅ Deployment completed and restarted with latest image!"
