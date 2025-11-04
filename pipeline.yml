@@ -23,16 +23,17 @@ jobs:
         trigger: true
       - put: simple-image
         params:
-          build: app-repo   # app-repo dizinindeki Dockerfile kullanılacak
+          build: app-repo
 
   # --- JOB 2: Kubernetes'e deploy et ---
   - name: deploy-to-kubernetes
     plan:
+      # build-and-push job'ının bitmesini bekle
       - get: app-repo
-        trigger: false
-        passed: [build-and-push]   # ✅ build job tamamlanınca çalışır
+        passed: [build-and-push]
+        trigger: true
       - get: simple-image
-        trigger: false
+        passed: [build-and-push]
 
       - task: deploy
         config:
@@ -61,7 +62,10 @@ jobs:
                 kubectl apply -f app-repo/service.yml
                 kubectl apply -f app-repo/hpa.yml
 
-                echo "♻️ Restarting Deployment to pull latest image..."
+                echo "♻️ Restarting deployment to pull latest image..."
                 kubectl rollout restart deployment/hello-world
 
-                echo "✅ Deployment completed and restarted with latest image!"
+                echo "⏳ Waiting for rollout to complete..."
+                kubectl rollout status deployment/hello-world
+
+                echo "✅ Deployment completed!"
