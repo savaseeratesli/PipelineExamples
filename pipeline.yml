@@ -1,46 +1,57 @@
 resources:
-  # Git repo (senin PipelineExamples projen)
-  - name: pipelineexamples
+  # --- 1. GitHub repository ---
+  - name: app-repo
     type: git
-    icon: github
     source:
       uri: https://github.com/savaseeratesli/PipelineExamples.git
       branch: main
 
-  # Docker imajını push edeceğin hedef (Docker Hub)
+  # --- 2. Docker image ---
   - name: simple-image
-    type: registry-image
-    icon: docker
+    type: docker-image
     source:
       repository: savaseeratesli/simple-image
       tag: latest
+      username: ((dockerhub_username))
+      password: ((dockerhub_password))
 
 jobs:
+  # --- JOB 1: Docker image build + push ---
   - name: build-and-push
     plan:
-      - get: pipelineexamples
+      - get: app-repo
         trigger: true
+      - put: simple-image
+        params:
+          build: app-repo
 
-      # Docker imajını build et
-      - task: build-dotnet-image
-        privileged: true
+  # --- JOB 2: Kubernetes deploy ---
+  - name: deploy-to-kubernetes
+    plan:
+      - get: app-repo
+        trigger: true
+        passed: [build-and-push]
+      - task: deploy
         config:
           platform: linux
           image_resource:
             type: registry-image
             source:
-              repository: concourse/oci-build-task
+              repository: bitnami/kubectl
+              tag: latest
           inputs:
-            - name: pipelineexamples
-          outputs:
-            - name: image
+            - name: app-repo
           params:
-            CONTEXT: pipelineexamples
-            DOCKERFILE: pipelineexamples/Dockerfile
+            KUBE_CONFIG: ((kubeconfig))
           run:
-            path: build
-
-      # Docker imajını push et
-      - put: simple-image
-        params:
-          image: image/image.tar
+            path: sh
+            args:
+              - -exc
+              - |
+                echo "$KUBE_CONFIG" > /root/.kube/config
+                cd app-repo
+                echo "🔹 Deploying to Kubernetes..."
+                kubectl apply -f deployment.yml
+                kubectl apply -f service.yml
+                kubectl apply -f hpa.yml
+                echo "✅ Deployment complete!"
