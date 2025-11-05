@@ -1,35 +1,67 @@
-1)git pull https://github.com/savaseeratesli/PipelineExamples.git
+1)git clone https://github.com/savaseeratesli/PipelineExamples.git
 
+2)git pull https://github.com/savaseeratesli/PipelineExamples.git
 
-$ fly -t tutorial set-pipeline -p pipelineexample -c pipeline.yml -l vars.yml
+------------------------------------------------------------------------------
+#vars.yml içeriği
+# --- Docker Hub bilgileri ---
+dockerhub_username: "savaseeratesli"
+dockerhub_password: ""
 
-fly -t tutorial set-pipeline \
-  -p pipelineexample \
-  -c pipeline.yml \
-  -v tag=$(date +%Y%m%d%H%M%S) \
-  -l vars.yml
+# --- Kubernetes config (k3s kubeconfig içeriği) /etc/rancher/k3s/k3s.yaml ---
+kubeconfig: |
+  apiVersion: v1
+  clusters:
+  - cluster:
+      certificate-authority-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJkekNDQVIyZ0F3SUJBZ0lCQURBS0JnZ3Foa2pPUFFRREFqQWpNU0V3SHdZRFZRUUREQmhyTTNNdGMyVnkKZG1WeUxXTmhRREUzTmpJeE5qWTNOelF3SGhjTk1qVXhNVEF6TVRBME5qRTBXaGNOTXpVeE1UQXhNVEEwTmpFMApXakFqTVNFd0h3WURWUVFEREJock0zTXRjMlZ5ZG1WeUxXTmhRREUzTmpJeE5qWTNOelF3V1RBVEJnY3Foa2pPClBRSUJCZ2dxaGtqT1BRTUJCd05DQUFTUG5YanlhU2tIdUY0ZkNkdklGUlVUbm1TZGY3dlE2UDMxeWU4VUo1a0oKTEtNQTJ0TzgwTW5DNTFwemZsUmNCSFl2a0lwcnZpOGcyREVpdzk3ZmVXQ3FvMEl3UURBT0JnTlZIUThCQWY4RQpCQU1DQXFRd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVVJVTUNrYkl2cFRSWmJnUjdOL2pzCmFjY24ydFl3Q2dZSUtvWkl6ajBFQXdJRFNBQXdSUUlnU2t0aWJ1SEZodW5PSEZuUG92Z3hzSlVlelhUWXNqbWEKUlZWckVpYkVxd29DSVFET1Y1TFQ5V0xXQldibWtyYmljZ2tjbEZ0ai9Nb1hMOCttS2EzYXliempOQT09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+      server: https://192.168.68.104:6443
+    name: default
+  contexts:
+  - context:
+      cluster: default
+      user: default
+    name: default
+  current-context: default
+  kind: Config
+  preferences: {}
+  users:
+  - name: default
+    user:
+      client-certificate-data: LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJrVENDQVRlZ0F3SUJBZ0lJSUlEMGZlT05qdEl3Q2dZSUtvWkl6ajBFQXdJd0l6RWhNQjhHQTFVRUF3d1kKYXpOekxXTnNhV1Z1ZEMxallVQXhOell5TVRZMk56YzBNQjRYRFRJMU1URXdNekV3TkRZeE5Gb1hEVEkyTVRFdwpNekV3TkRZeE5Gb3dNREVYTUJVR0ExVUVDaE1PYzNsemRHVnRPbTFoYzNSbGNuTXhGVEFUQmdOVkJBTVRESE41CmMzUmxiVHBoWkcxcGJqQlpNQk1HQnlxR1NNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJMSHR6ZitEMkVQZGdBazYKR0dZeVhCWjhwL1ZXY054Z1JaOWdVSFZXTForYlFHcVRkYlVUb1d1YzFaNldOQWY3Y3AyRmpoOGdjM0E5UmhhcwpMakFMV0tXalNEQkdNQTRHQTFVZER3RUIvd1FFQXdJRm9EQVRCZ05WSFNVRUREQUtCZ2dyQmdFRkJRY0RBakFmCkJnTlZIU01FR0RBV2dCUWY0WUhkWVNhTmdDM1Y0ZTlnVnR3ZHNOMHBzREFLQmdncWhrak9QUVFEQWdOSUFEQkYKQWlCeXFQdDJyN3pGZnRxdzY2SmNXa0JhMnA1N0c4Lzh6SHNldHVwZ0I1R29aZ0loQUtCN1Qyc0lzK1hxMEFNdgpHN3NCQjJxUjhOTTdyTzdpY0VpV1NIYWdObmxiCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0KLS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUJkekNDQVIyZ0F3SUJBZ0lCQURBS0JnZ3Foa2pPUFFRREFqQWpNU0V3SHdZRFZRUUREQmhyTTNNdFkyeHAKWlc1MExXTmhRREUzTmpJeE5qWTNOelF3SGhjTk1qVXhNVEF6TVRBME5qRTBXaGNOTXpVeE1UQXhNVEEwTmpFMApXakFqTVNFd0h3WURWUVFEREJock0zTXRZMnhwWlc1MExXTmhRREUzTmpJeE5qWTNOelF3V1RBVEJnY3Foa2pPClBRSUJCZ2dxaGtqT1BRTUJCd05DQUFTdXlzcFBLL0RTUUNnWk1YK2hCYkxsZU9YdDRCcExHQi9BUTFBa3R4OTgKTVFIM2JTbS9FNHBtRkNFZVhBdmFtLzI4NFVkODR5VkJvcStsWll3VWY1ejhvMEl3UURBT0JnTlZIUThCQWY4RQpCQU1DQXFRd0R3WURWUjBUQVFIL0JBVXdBd0VCL3pBZEJnTlZIUTRFRmdRVUgrR0IzV0VtallBdDFlSHZZRmJjCkhiRGRLYkF3Q2dZSUtvWkl6ajBFQXdJRFNBQXdSUUlnRmVTRE0rSnBTRktrWEkxcjVVbmhHT3BBcFBJRi9pSmUKUnBPSHpPQWVtdjRDSVFDQ3lPQjlvNytiVytPSjEvT3RUVVYwSkV6ZWZIR01MZW56VlNWTTN0K3RYdz09Ci0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K
+      client-key-data: LS0tLS1CRUdJTiBFQyBQUklWQVRFIEtFWS0tLS0tCk1IY0NBUUVFSUZ2L21Lc0preFdzNXRDMTRqWUlGRnIrL281YXhlSGE2VnZkZUtTVUZPVlJvQW9HQ0NxR1NNNDkKQXdFSG9VUURRZ0FFc2UzTi80UFlROTJBQ1RvWVpqSmNGbnluOVZadzNHQkZuMkJRZFZZdG41dEFhcE4xdFJPaAphNXpWbnBZMEIvdHluWVdPSHlCemNEMUdGcXd1TUF0WXBRPT0KLS0tLS1FTkQgRUMgUFJJVkFURSBLRVktLS0tLQo=
 
-$ fly -t tutorial unpause-pipeline -p pipelineexample
+------------------------------------------------------------------------------
+# Pipeline oluşturma komutları
+fly -t tutorial set-pipeline -p pipelineexample -c pipeline.yml -l vars.yml 
+-->> Concourse CI’de pipeline.yml ve vars.yml dosyalarını kullanarak pipelineexample adlı pipeline’ı oluşturur veya günceller.
 
-$ fly -t tutorial trigger-job --job pipelineexample/build-and-push --watch
+fly -t tutorial unpause-pipeline -p pipelineexample
+-->>pipelineexample adlı pipeline’ı çalışır (aktif) hale getirir.
+
+fly -t tutorial trigger-job --job pipelineexample/build-and-push --watch
+-->>pipelineexample adlı pipeline’daki build-and-push job’unu elle başlatır ve çıktısını canlı olarak ekranda gösterir.
 
 fly -t tutorial trigger-job --job pipelineexample/deploy-to-kubernetes --watch
+-->>pipelineexample adlı pipeline’daki deploy-to-kubernetes job’unu elle başlatır ve çıktısını canlı olarak ekranda gösterir.
 
--------------------------------------------------------------------------------
-fly -t tutorial set-pipeline -p pipelinek8s -c pipelinek8s.yml -l vars.yml
+fly -t tutorial destroy-pipeline -p pipelineexample
+-->>pipelineexample adlı pipeline’ı tamamen siler (geri alınamaz şekilde kaldırır).
 
-
-fly -t tutorial unpause-pipeline -p pipelinek8s
-
-fly -t tutorial trigger-job --job pipelinek8s/deploy-to-k8s --watch
-
-
-fly -t tutorial destroy-pipeline -p pipelinek8s
 ------------------------------------------------------------------------------
 
 docker run -d -p 9090:9090 --name simple-image savaseeratesli/simple-image:latest
+-->>Build edilen image doğru mu kontrol etmek için container üzerinde çalıştırılıp teyit edilir.
 
-------------------------------------------------------------------------------------
+
+#Concourse container üzerinde çalıştırmak için
+docker-compose down -v
+
+docker-compose up -d
+
+fly -t tutorial login -c http://localhost:8080 -u test -p test
+-->> Concourse container olarak çalışmaya başlayınca bağlantı sağlanır.
+------------------------------------------------------------------------------
+#Concourse kontrol komutları basit pipeline örnek
 $ fly -t tutorial set-pipeline -p hello-world -c hello-world.yml
 # pipelines are paused when first created
 $ fly -t tutorial unpause-pipeline -p hello-world
@@ -37,15 +69,5 @@ $ fly -t tutorial unpause-pipeline -p hello-world
 $ fly -t tutorial trigger-job --job hello-world/hello-world-job --watch
 
 
-fly -t tutorial login -c http://localhost:8080 -u test -p test
-
- 590  docker-compose down -v
-
-  594  docker-compose up -d
-
-  systemctl restart k3s
 
 
-docker run -d -p 9090:9090 --name pipelineexamplesPipelineExamp savaseeratesli/test:latest
-
-fly -t tutorial destroy-pipeline -p test1
