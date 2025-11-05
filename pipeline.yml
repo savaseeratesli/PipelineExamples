@@ -40,8 +40,8 @@ jobs:
 - name: deploy-to-k8s
   plan:
   - get: app-repo
-    trigger: true
     passed: [build-and-push]
+    trigger: true
 
   - task: apply-k8s
     config:
