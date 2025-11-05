@@ -6,7 +6,7 @@ resources:
       uri: https://github.com/savaseeratesli/PipelineExamples.git
       branch: main
 
-  # --- 2. Docker image kaynağı ---
+  # --- 2. Docker image kaynağı (Concourse kendi build eder/push eder) ---
   - name: simple-image
     type: docker-image
     source:
@@ -20,33 +20,11 @@ jobs:
     plan:
       - get: app-repo
         trigger: true
-      - task: build-and-tag
-        privileged: true
-        config:
-          platform: linux
-          image_resource:
-            type: registry-image
-            source:
-              repository: docker
-          inputs:
-            - name: app-repo
-          outputs:
-            - name: built
-          run:
-            path: sh
-            args:
-              - -exc
-              - |
-                cd app-repo
-                TAG=$(date +%Y%m%d%H%M%S)
-                echo "🔥 Building new image: savaseeratesli/simple-image:$TAG ..."
-                docker build -t savaseeratesli/simple-image:$TAG .
-                docker push savaseeratesli/simple-image:$TAG
-                echo $TAG > ../built/tag.txt
-                echo "✅ Image built and pushed: $TAG"
       - put: simple-image
         params:
-          image: built/tag.txt
+          build: app-repo
+          tag: ((tag))
+          tag_as_latest: true
 
   # --- JOB 2: Kubernetes'e deploy et ---
   - name: deploy-to-kubernetes
@@ -56,7 +34,6 @@ jobs:
         trigger: true
       - get: simple-image
         passed: [build-and-push]
-
       - task: deploy
         config:
           platform: linux
@@ -64,11 +41,9 @@ jobs:
             type: registry-image
             source:
               repository: bitnami/kubectl
-              tag: latest
           inputs:
             - name: app-repo
             - name: simple-image
-            - name: built
           params:
             KUBE_CONFIG: ((kubeconfig))
           run:
@@ -81,13 +56,10 @@ jobs:
                 mkdir -p ~/.kube
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
-                TAG=$(cat built/tag.txt)
-                echo "🔁 Updating deployment to use new image: savaseeratesli/simple-image:$TAG"
+                TAG=$(cat simple-image/tag)
+                echo "🔁 Updating deployment to new image: savaseeratesli/simple-image:$TAG"
 
-                # Deployment içindeki image'ı güncelle
                 kubectl set image deployment/hello-world hello-world=savaseeratesli/simple-image:$TAG --record
-
-                # Rollout'un başarıyla tamamlanmasını bekle
                 kubectl rollout status deployment/hello-world
 
-                echo "✅ Deployment updated to new image: $TAG"
+                echo "✅ Deployment updated successfully!"
