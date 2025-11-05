@@ -21,9 +21,32 @@ jobs:
     plan:
       - get: app-repo
         trigger: true
+
+      - task: tag-and-build
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: alpine
+          inputs:
+            - name: app-repo
+          outputs:
+            - name: version
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                BUILD_TAG="build-$(date +'%Y%m%d-%H%M%S')"
+                echo $BUILD_TAG > version/tag.txt
+                echo "🧩 Generated tag: $BUILD_TAG"
+
       - put: simple-image
         params:
-          build: app-repo   # app-repo dizinindeki Dockerfile kullanılacak
+          build: app-repo
+          tag: version/tag.txt
+          additional_tags: latest
 
   # --- JOB 2: Kubernetes'e deploy et ---
   - name: deploy-to-kubernetes
@@ -32,6 +55,8 @@ jobs:
         passed: [build-and-push]
         trigger: true
       - get: simple-image
+        passed: [build-and-push]
+      - get: version
         passed: [build-and-push]
 
       - task: deploy
@@ -44,6 +69,7 @@ jobs:
               tag: latest
           inputs:
             - name: app-repo
+            - name: version
           params:
             KUBE_CONFIG: ((kubeconfig))
           run:
@@ -52,20 +78,27 @@ jobs:
               - -exc
               - |
                 echo "🚀 Deploying to Kubernetes..."
-
                 mkdir -p ~/.kube
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
+                TAG=$(cat version/tag.txt)
+                echo "📦 Deploying image with tag: $TAG"
+
+                DEPLOYMENT_FILE="app-repo/deployment.yml"
+
+                # Deployment dosyasındaki image tag'ını dinamik olarak güncelle
+                sed -i "s|\(image: savaseeratesli/simple-image:\).*|\1$TAG|g" $DEPLOYMENT_FILE
+
                 echo "🔍 Applying manifests..."
-                kubectl apply -f app-repo/deployment.yml
+                kubectl apply -f $DEPLOYMENT_FILE
                 kubectl apply -f app-repo/service.yml
                 kubectl apply -f app-repo/hpa.yml
 
-                echo "🔄 Forcing pods to use latest image..."
+                echo "🔄 Forcing rollout with new image tag..."
                 DEPLOYMENT_NAME=$(kubectl get deploy -o jsonpath='{.items[0].metadata.name}')
                 kubectl rollout restart deployment $DEPLOYMENT_NAME
 
                 echo "⏳ Waiting for rollout to finish..."
                 kubectl rollout status deployment/$DEPLOYMENT_NAME --timeout=360s
 
-                echo "✅ Deployment completed successfully!"
+                echo "✅ Deployment completed successfully with image tag: $TAG"
