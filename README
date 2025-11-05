@@ -7,7 +7,7 @@ $ fly -t tutorial unpause-pipeline -p pipelineexample
 
 $ fly -t tutorial trigger-job --job pipelineexample/build-and-push --watch
 
-fly -t tutorial trigger-job --job pipelineexample/deploy-to-k8s --watch
+fly -t tutorial trigger-job --job pipelineexample/deploy-to-kubernetes --watch
 
 -------------------------------------------------------------------------------
 fly -t tutorial set-pipeline -p pipelinek8s -c pipelinek8s.yml -l vars.yml
@@ -36,6 +36,8 @@ fly -t tutorial login -c http://localhost:8080 -u test -p test
  590  docker-compose down -v
 
   594  docker-compose up -d
+
+  systemctl restart k3s
 
 
 docker run -d -p 9090:9090 --name pipelineexamplesPipelineExamp savaseeratesli/test:latest
