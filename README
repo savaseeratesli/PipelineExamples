@@ -3,6 +3,12 @@
 
 $ fly -t tutorial set-pipeline -p pipelineexample -c pipeline.yml -l vars.yml
 
+fly -t tutorial set-pipeline \
+  -p pipelineexample \
+  -c pipeline.yml \
+  -v tag=$(date +%Y%m%d%H%M%S) \
+  -l vars.yml
+
 $ fly -t tutorial unpause-pipeline -p pipelineexample
 
 $ fly -t tutorial trigger-job --job pipelineexample/build-and-push --watch

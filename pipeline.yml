@@ -6,7 +6,7 @@ resources:
       uri: https://github.com/savaseeratesli/PipelineExamples.git
       branch: main
 
-  # --- 2. Docker image kaynağı (Concourse kendi build eder/push eder) ---
+  # --- 2. Docker image kaynağı ---
   - name: simple-image
     type: docker-image
     source:
@@ -20,10 +20,31 @@ jobs:
     plan:
       - get: app-repo
         trigger: true
+
+      # --- Adım 1: Otomatik tag oluştur ---
+      - task: gen-tag
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: busybox
+          outputs:
+            - name: tag-dir
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                TAG=$(date +%Y%m%d%H%M%S)
+                echo "$TAG" > tag-dir/tag.txt
+                echo "🧩 Generated tag: $TAG"
+
+      # --- Adım 2: Image'i build + push et ---
       - put: simple-image
         params:
           build: app-repo
-          tag: ((tag))
+          tag_file: tag-dir/tag.txt
           tag_as_latest: true
 
   # --- JOB 2: Kubernetes'e deploy et ---
@@ -34,6 +55,9 @@ jobs:
         trigger: true
       - get: simple-image
         passed: [build-and-push]
+      - get: tag-dir
+        passed: [build-and-push]
+
       - task: deploy
         config:
           platform: linux
@@ -41,9 +65,11 @@ jobs:
             type: registry-image
             source:
               repository: bitnami/kubectl
+              tag: latest
           inputs:
             - name: app-repo
             - name: simple-image
+            - name: tag-dir
           params:
             KUBE_CONFIG: ((kubeconfig))
           run:
@@ -56,10 +82,10 @@ jobs:
                 mkdir -p ~/.kube
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
-                TAG=$(cat simple-image/tag)
-                echo "🔁 Updating deployment to new image: savaseeratesli/simple-image:$TAG"
+                TAG=$(cat tag-dir/tag.txt)
+                echo "🔁 Updating deployment to use new image: savaseeratesli/simple-image:$TAG"
 
                 kubectl set image deployment/hello-world hello-world=savaseeratesli/simple-image:$TAG --record
                 kubectl rollout status deployment/hello-world
 
-                echo "✅ Deployment updated successfully!"
+                echo "✅ Deployment updated successfully to new image: $TAG"
