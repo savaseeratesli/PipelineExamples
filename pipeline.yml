@@ -1,66 +1,64 @@
 resources:
-- name: app-repo
-  type: git
-  source:
-    uri: https://github.com/savaseeratesli/PipelineExamples.git
-    branch: main
+  # --- 1. Kaynak kod deposu (GitHub) ---
+  - name: app-repo
+    type: git
+    source:
+      uri: https://github.com/savaseeratesli/PipelineExamples.git
+      branch: main
+
+  # --- 2. Docker image kaynağı ---
+  - name: simple-image
+    type: docker-image
+    source:
+      repository: savaseeratesli/simple-image
+      tag: latest
+      username: ((dockerhub_username))
+      password: ((dockerhub_password))
 
 jobs:
-- name: build-and-push
-  plan:
-  - get: app-repo
-    trigger: true
+  # --- JOB 1: Docker image build + push ---
+  - name: build-and-push
+    plan:
+      - get: app-repo
+        trigger: true
+      - put: simple-image
+        params:
+          build: app-repo   # app-repo dizinindeki Dockerfile kullanılacak
 
-  - task: build-docker
-    privileged: true
-    config:
-      platform: linux
-      image_resource:
-        type: registry-image
-        source:
-          repository: docker
-      inputs:
-      - name: app-repo
-      params:
-        DOCKERHUB_USERNAME: ((dockerhub_username))
-        DOCKERHUB_PASSWORD: ((dockerhub_password))
-      run:
-        path: sh
-        args:
-          - -exc
-          - |
-            cd app-repo
-            echo "🔹 Docker imajı oluşturuluyor..."
-            docker build -t savaseeratesli/test:latest .
-            echo "🔹 DockerHub'a giriş yapılıyor..."
-            echo "$DOCKERHUB_PASSWORD" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-            echo "🔹 İmaj DockerHub'a gönderiliyor..."
-            docker push savaseeratesli/test:latest
+  # --- JOB 2: Kubernetes'e deploy et ---
+  - name: deploy-to-kubernetes
+    plan:
+      - get: app-repo
+        passed: [build-and-push]   # JOB 1 tamamlanmadan başlamaz
+        trigger: true
+      - get: simple-image
+        passed: [build-and-push]
 
-- name: deploy-to-k8s
-  plan:
-  - get: app-repo
-    passed: [build-and-push]
-    trigger: true
+      - task: deploy
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: bitnami/kubectl
+              tag: latest
+          inputs:
+            - name: app-repo
+          params:
+            KUBE_CONFIG: ((kubeconfig))
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                echo "🚀 Deploying to Kubernetes..."
 
-  - task: apply-k8s
-    config:
-      platform: linux
-      image_resource:
-        type: registry-image
-        source:
-          repository: bitnami/kubectl
-      inputs:
-      - name: app-repo
-      params:
-        KUBECONFIG: ((kubeconfig))
-      run:
-        path: sh
-        args:
-          - -exc
-          - |
-            cd app-repo
-            echo "🔹 Kubernetes manifestleri uygulanıyor..."
-            kubectl apply -f deployment.yml
-            kubectl apply -f service.yml
-            kubectl apply -f hpa.yml
+                mkdir -p ~/.kube
+                echo "$KUBE_CONFIG" > ~/.kube/config
+
+                echo "🔍 Applying Deployment, Service and HPA..."
+                kubectl apply -f app-repo/deployment.yml
+                kubectl apply -f app-repo/service.yml
+                kubectl apply -f app-repo/hpa.yml
+
+                echo "✅ Deployment completed!"
