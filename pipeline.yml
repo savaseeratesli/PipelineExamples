@@ -11,6 +11,7 @@ resources:
     type: docker-image
     source:
       repository: savaseeratesli/simple-image
+      tag: latest
       username: ((dockerhub_username))
       password: ((dockerhub_password))
 
@@ -20,41 +21,15 @@ jobs:
     plan:
       - get: app-repo
         trigger: true
-
-      # 🔹 Git commit hash'ten tag üret
-      - task: generate-tag
-        config:
-          platform: linux
-          image_resource:
-            type: registry-image
-            source:
-              repository: alpine/git
-              tag: latest
-          inputs:
-            - name: app-repo
-          outputs:
-            - name: tag-dir
-          run:
-            path: sh
-            args:
-              - -exc
-              - |
-                cd app-repo
-                TAG=$(git rev-parse --short HEAD)
-                echo $TAG > ../tag-dir/tag.txt
-                echo "🆕 Generated tag: $TAG"
-
-      # 🔹 Image'ı unique tag ile pushla
       - put: simple-image
         params:
-          build: app-repo
-          tag_file: tag-dir/tag.txt
+          build: app-repo   # app-repo dizinindeki Dockerfile kullanılacak
 
   # --- JOB 2: Kubernetes'e deploy et ---
   - name: deploy-to-kubernetes
     plan:
       - get: app-repo
-        passed: [build-and-push]
+        passed: [build-and-push]   # JOB 1 tamamlanmadan başlamaz
         trigger: true
       - get: simple-image
         passed: [build-and-push]
@@ -69,7 +44,6 @@ jobs:
               tag: latest
           inputs:
             - name: app-repo
-            - name: simple-image
           params:
             KUBE_CONFIG: ((kubeconfig))
           run:
@@ -82,16 +56,12 @@ jobs:
                 mkdir -p ~/.kube
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
-                # 🔹 Git commit hash’li tag’i oku
-                TAG=$(cat simple-image/tag)
-                echo "📦 Using image tag: $TAG"
-
-                # 🔹 deployment.yml dosyasındaki image satırını güncelle
-                sed -i "s|image: savaseeratesli/simple-image:.*|image: savaseeratesli/simple-image:$TAG|g" app-repo/deployment.yml
-
                 echo "🔍 Applying Deployment, Service and HPA..."
                 kubectl apply -f app-repo/deployment.yml
                 kubectl apply -f app-repo/service.yml
                 kubectl apply -f app-repo/hpa.yml
 
-                echo "✅ Deployment completed!"
+                echo "♻️ Forcing Kubernetes to reload latest image..."
+                kubectl rollout restart deployment hello-world
+
+                echo "✅ Deployment completed and restarted successfully!"
