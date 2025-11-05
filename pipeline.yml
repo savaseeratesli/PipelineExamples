@@ -21,39 +21,34 @@ jobs:
       - get: app-repo
         trigger: true
 
-      - task: build-and-push-image
-        privileged: true
+      # 🔹 Git commit hash'ten tag üret
+      - task: generate-tag
         config:
           platform: linux
           image_resource:
             type: registry-image
             source:
-              repository: docker
-              tag: dind
+              repository: alpine/git
+              tag: latest
           inputs:
             - name: app-repo
           outputs:
-            - name: image-info
-          params:
-            DOCKERHUB_USERNAME: ((dockerhub_username))
-            DOCKERHUB_PASSWORD: ((dockerhub_password))
+            - name: tag-dir
           run:
             path: sh
             args:
               - -exc
               - |
                 cd app-repo
-                TAG=$(date +%Y%m%d%H%M%S)
-                echo "🔥 Building and pushing image: savaseeratesli/simple-image:${TAG}"
+                TAG=$(git rev-parse --short HEAD)
+                echo $TAG > ../tag-dir/tag.txt
+                echo "🆕 Generated tag: $TAG"
 
-                dockerd-entrypoint.sh &    # Docker daemon başlat
-                sleep 6                    # Daemon ayağa kalksın
-
-                docker login -u "$DOCKERHUB_USERNAME" -p "$DOCKERHUB_PASSWORD"
-                docker build -t savaseeratesli/simple-image:${TAG} .
-                docker push savaseeratesli/simple-image:${TAG}
-                echo "${TAG}" > ../image-info/tag.txt
-                echo "✅ Image pushed with tag ${TAG}"
+      # 🔹 Image'ı unique tag ile pushla
+      - put: simple-image
+        params:
+          build: app-repo
+          tag_file: tag-dir/tag.txt
 
   # --- JOB 2: Kubernetes'e deploy et ---
   - name: deploy-to-kubernetes
@@ -62,8 +57,6 @@ jobs:
         passed: [build-and-push]
         trigger: true
       - get: simple-image
-        passed: [build-and-push]
-      - get: image-info
         passed: [build-and-push]
 
       - task: deploy
@@ -76,7 +69,7 @@ jobs:
               tag: latest
           inputs:
             - name: app-repo
-            - name: image-info
+            - name: simple-image
           params:
             KUBE_CONFIG: ((kubeconfig))
           run:
@@ -84,16 +77,21 @@ jobs:
             args:
               - -exc
               - |
-                TAG=$(cat image-info/tag.txt)
-                echo "🚀 Deploying new image version ${TAG} to Kubernetes..."
+                echo "🚀 Deploying to Kubernetes..."
 
                 mkdir -p ~/.kube
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
-                echo "🔍 Updating deployment image..."
-                kubectl set image deployment/hello-world hello-world=savaseeratesli/simple-image:${TAG} --record
+                # 🔹 Git commit hash’li tag’i oku
+                TAG=$(cat simple-image/tag)
+                echo "📦 Using image tag: $TAG"
 
-                echo "⏳ Waiting for rollout to finish..."
-                kubectl rollout status deployment/hello-world
+                # 🔹 deployment.yml dosyasındaki image satırını güncelle
+                sed -i "s|image: savaseeratesli/simple-image:.*|image: savaseeratesli/simple-image:$TAG|g" app-repo/deployment.yml
 
-                echo "✅ Deployment completed successfully with tag ${TAG}"
+                echo "🔍 Applying Deployment, Service and HPA..."
+                kubectl apply -f app-repo/deployment.yml
+                kubectl apply -f app-repo/service.yml
+                kubectl apply -f app-repo/hpa.yml
+
+                echo "✅ Deployment completed!"
