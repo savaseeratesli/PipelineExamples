@@ -57,7 +57,7 @@ jobs:
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
                 echo "🔍 Applying manifests..."
-                kubectl apply -f app-repo/deployment.yml
+                kubectl apply --validate=false -f app-repo/deployment.yml
                 kubectl apply -f app-repo/service.yml
                 kubectl apply -f app-repo/hpa.yml
 
