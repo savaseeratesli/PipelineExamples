@@ -24,7 +24,7 @@ spec:
           image: savaseeratesli/simple-image:latest
           imagePullPolicy: Always  # 🚀 Her zaman en son imajı çek
           ports:
-            - containerPort: 9090
+            - containerPort: 11130
           resources:
             requests:
               cpu: "100m"

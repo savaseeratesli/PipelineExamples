@@ -7,6 +7,6 @@ spec:
     app: hello-world
   ports:
     - protocol: TCP
-      port: 9090
-      targetPort: 9090
+      port: 11130
+      targetPort: 11130
   type: LoadBalancer
