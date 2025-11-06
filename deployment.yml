@@ -1,34 +1,71 @@
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: hello-world
-  labels:
-    app: hello-world
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: hello-world
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
-  template:
-    metadata:
-      labels:
-        app: hello-world
-    spec:
-      containers:
-        - name: hello-world
-          image: savaseeratesli/simple-image:latest
-          imagePullPolicy: Always  # Her zaman en son imajı çek
-          ports:
-            - containerPort: 9090
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "250m"
-              memory: "256Mi"
+resources:
+  # --- 1. Kaynak kod deposu (GitHub) ---
+  - name: app-repo
+    type: git
+    source:
+      uri: https://github.com/savaseeratesli/PipelineExamples.git
+      branch: main
+
+  # --- 2. Docker image kaynağı ---
+  - name: simple-image
+    type: docker-image
+    source:
+      repository: savaseeratesli/simple-image
+      tag: latest
+      username: ((dockerhub_username))
+      password: ((dockerhub_password))
+
+jobs:
+  # --- JOB 1: Docker image build + push ---
+  - name: build-and-push
+    plan:
+      - get: app-repo
+        trigger: true
+      - put: simple-image
+        params:
+          build: app-repo   # app-repo dizinindeki Dockerfile kullanılacak
+
+  # --- JOB 2: Kubernetes'e deploy et ---
+  - name: deploy-to-kubernetes
+    plan:
+      - get: app-repo
+        passed: [build-and-push]
+        trigger: true
+      - get: simple-image
+        passed: [build-and-push]
+
+      - task: deploy
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: bitnami/kubectl
+              tag: latest
+          inputs:
+            - name: app-repo
+          params:
+            KUBE_CONFIG: ((kubeconfig))
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                echo "🚀 Deploying to Kubernetes..."
+
+                mkdir -p ~/.kube
+                echo "$KUBE_CONFIG" > ~/.kube/config
+
+                echo "🔍 Applying manifests..."
+                kubectl apply -f app-repo/deployment.yml
+                kubectl apply -f app-repo/service.yml
+                kubectl apply -f app-repo/hpa.yml
+
+                echo "🔄 Forcing pods to use latest image..."
+                DEPLOYMENT_NAME=$(kubectl get deploy -o jsonpath='{.items[0].metadata.name}')
+                kubectl rollout restart deployment $DEPLOYMENT_NAME
+
+                echo "⏳ Waiting for rollout to finish..."
+                kubectl rollout status deployment/$DEPLOYMENT_NAME --timeout=360s
+
+                echo "✅ Deployment completed successfully!"
