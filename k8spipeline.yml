@@ -36,8 +36,8 @@ jobs:
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
                 echo "Applying Deployment, Service and HPA..."
-                kubectl apply -f app-repo/deployment.yml
-                kubectl apply -f app-repo/service.yml
-                kubectl apply -f app-repo/hpa.yml
+                kubectl apply -f deployment.yml
+                kubectl apply -f service.yml
+                kubectl apply -f hpa.yml
 
                 echo "Deployment completed!"
