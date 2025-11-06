@@ -48,6 +48,7 @@ jobs:
             args:
               - -exc
               - |
+                mkdir -p /root/.kube
                 echo "$KUBE_CONFIG" > /root/.kube/config
                 cd app-repo
                 echo "🔹 Deploying to Kubernetes..."
