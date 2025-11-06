@@ -30,14 +30,14 @@ jobs:
             args:
               - -exc
               - |
-                echo "Deploying to Kubernetes..."
+                echo "🚀 Deploying to Kubernetes..."
 
                 mkdir -p ~/.kube
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
-                echo "Applying Deployment, Service and HPA..."
-                kubectl apply -f deployment.yml
-                kubectl apply -f service.yml
-                kubectl apply -f hpa.yml
+                echo "🔍 Applying Deployment, Service and HPA..."
+                kubectl apply -f app-repo/deployment.yml
+                kubectl apply -f app-repo/service.yml
+                kubectl apply -f app-repo/hpa.yml
 
-                echo "Deployment completed!"
+                echo "✅ Deployment completed!"
