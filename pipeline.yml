@@ -57,9 +57,9 @@ jobs:
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
                 echo "🔍 Applying manifests..."
-                kubectl apply --validate=false -f app-repo/deployment.yml
-                kubectl apply -f app-repo/service.yml
-                kubectl apply -f app-repo/hpa.yml
+                kubectl apply -f deployment.yml
+                kubectl apply -f service.yml
+                kubectl apply -f hpa.yml
 
                 echo "🔄 Forcing pods to use latest image..."
                 DEPLOYMENT_NAME=$(kubectl get deploy -o jsonpath='{.items[0].metadata.name}')
