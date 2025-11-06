@@ -48,9 +48,8 @@ jobs:
             args:
               - -exc
               - |
-                mkdir -p /root/.kube
-                echo "$KUBE_CONFIG" > /root/.kube/config
-                cd app-repo
+                mkdir -p ~/.kube
+                echo "$KUBE_CONFIG" > ~/.kube/config
                 echo "🔹 Deploying to Kubernetes..."
                 kubectl apply -f deployment.yml
                 kubectl apply -f service.yml
