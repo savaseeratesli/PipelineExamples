@@ -22,7 +22,7 @@ spec:
       containers:
         - name: hello-world
           image: savaseeratesli/simple-image:latest
-          imagePullPolicy: Always  # 🚀 Her zaman en son imajı çek
+          imagePullPolicy: Always  # Her zaman en son imajı çek
           ports:
             - containerPort: 9090
           resources:

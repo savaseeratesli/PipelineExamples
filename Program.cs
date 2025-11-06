@@ -1,6 +1,6 @@
 var builder = WebApplication.CreateBuilder(args);
 var app = builder.Build();
 
-app.MapGet("/", () => "-->>VS Code başlayan bu yolculuk container -> k8s de son buldu!Savaş Enes ERATEŞLİ.05/11/2025 16:00");
+app.MapGet("/", () => "hello world.Savaş Enes ERATEŞLİ.06/11/2025 16:35");
 
 app.Run("http://0.0.0.0:9090");

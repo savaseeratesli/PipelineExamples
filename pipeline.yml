@@ -44,7 +44,7 @@ jobs:
       - put: simple-image
         params:
           build: app-repo
-          tag_file: version/tag.txt       # 🟢 ÖNEMLİ: Bu satır build imajına unique tag verir
+          tag_file: version/tag.txt       # ÖNEMLİ: Bu satır build imajına unique tag verir
           additional_tags: latest         # latest ek olarak güncellenir
 
   # --- JOB 2: Kubernetes'e deploy et ---
@@ -76,28 +76,28 @@ jobs:
             args:
               - -exc
               - |
-                echo "🚀 Deploying to Kubernetes..."
+                echo "Deploying to Kubernetes..."
                 mkdir -p ~/.kube
                 echo "$KUBE_CONFIG" > ~/.kube/config
 
                 TAG=$(cat version/tag.txt)
-                echo "📦 Using image tag: $TAG"
+                echo "Using image tag: $TAG"
 
                 DEPLOYMENT_FILE="app-repo/deployment.yml"
 
                 # Deployment içindeki image tag'ını yeni tag ile değiştir
                 sed -i "s|\(image: savaseeratesli/simple-image:\).*|\1$TAG|g" $DEPLOYMENT_FILE
 
-                echo "🔍 Applying manifests..."
+                echo "Applying manifests..."
                 kubectl apply -f $DEPLOYMENT_FILE
                 kubectl apply -f app-repo/service.yml
                 kubectl apply -f app-repo/hpa.yml
 
-                echo "🔄 Restarting deployment..."
+                echo "Restarting deployment..."
                 DEPLOYMENT_NAME=$(kubectl get deploy -o jsonpath='{.items[0].metadata.name}')
                 kubectl rollout restart deployment $DEPLOYMENT_NAME
 
-                echo "⏳ Waiting for rollout..."
+                echo "Waiting for rollout..."
                 kubectl rollout status deployment/$DEPLOYMENT_NAME --timeout=360s
 
-                echo "✅ Deployment completed successfully with image tag: $TAG"
+                echo "Deployment completed successfully with image tag: $TAG"

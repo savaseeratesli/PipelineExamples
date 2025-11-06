@@ -1,0 +1,41 @@
+---
+- name: Concourse k8spipeline kurulumu
+  hosts: localhost
+  become: false
+  vars:
+    pipeline_url: "https://raw.githubusercontent.com/savaseeratesli/PipelineExamples/main/k8spipeline.yml"
+    pipeline_file: "k8spipeline.yml"
+    target_name: "tutorial"
+    pipeline_name: "k8spipeline"
+
+  tasks:
+
+    - name: GitHub'dan k8spipeline.yml dosyasını indir
+      get_url:
+        url: "{{ pipeline_url }}"
+        dest: "{{ pipeline_file }}"
+
+    - name: Dosyanın sonuna yorum satırı ekle
+      lineinfile:
+        path: "{{ pipeline_file }}"
+        insertafter: EOF
+        line: "# -l vars.yml /etc/rancher/k3s/k3s.yaml"
+
+    - name: Pipeline'ı set et
+      command: >
+        fly -t {{ target_name }} set-pipeline
+        -p {{ pipeline_name }}
+        -c {{ pipeline_file }}
+      register: set_result
+
+    - debug:
+        msg: "{{ set_result.stdout_lines }}"
+
+    - name: Pipeline'ı aktif hale getir (unpause)
+      command: >
+        fly -t {{ target_name }} unpause-pipeline
+        -p {{ pipeline_name }}
+      register: unpause_result
+
+    - debug:
+        msg: "{{ unpause_result.stdout_lines }}"
