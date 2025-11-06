@@ -9,20 +9,26 @@ spec:
   selector:
     matchLabels:
       app: hello-world
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
       labels:
         app: hello-world
     spec:
       containers:
-      - name: hello-world
-        image: savaseeratesli/simple-image:latest
-        ports:
-        - containerPort: 9090
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-          limits:
-            cpu: "250m"
-            memory: "256Mi"
+        - name: hello-world
+          image: savaseeratesli/simple-image:latest
+          imagePullPolicy: Always  # 🚀 Her zaman en son imajı çek
+          ports:
+            - containerPort: 9090
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
