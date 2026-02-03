@@ -1,16 +1,25 @@
 resources:
-  # --- 1. GitHub kod deposu ---
   - name: app-repo
     type: git
     source:
       uri: https://github.com/savaseeratesli/PipelineExamples.git
       branch: main
 
+  - name: simple-image
+    type: docker-image
+    source:
+      repository: savaseeratesli/simple-image
+      tag: latest
+      username: ((dockerhub_username))
+      password: ((dockerhub_password))
+
 jobs:
-  # --- JOB 1: Kubernetes'e deploy et ---
   - name: deploy-to-kubernetes
     plan:
       - get: app-repo
+        trigger: true
+
+      - get: simple-image
         trigger: true
 
       - task: deploy
@@ -24,20 +33,33 @@ jobs:
           inputs:
             - name: app-repo
           params:
-            KUBE_CONFIG: ((kubeconfig))
+            KUBE_CONFIG_B64: ((kubeconfig))
           run:
             path: sh
             args:
               - -exc
               - |
-                echo "🚀 Deploying to Kubernetes..."
+                echo "Deploying to Kubernetes..."
 
-                mkdir -p ~/.kube
-                echo "$KUBE_CONFIG" > ~/.kube/config
+                export HOME=/tmp
+                mkdir -p $HOME/.kube
 
-                echo "🔍 Applying Deployment, Service and HPA..."
+                echo "$KUBE_CONFIG_B64" | base64 -d > $HOME/.kube/config
+                chmod 600 $HOME/.kube/config
+
+                echo "Cluster kontrol:"
+                kubectl get nodes
+
+                echo "Manifestler uygulanıyor..."
                 kubectl apply -f app-repo/deployment.yml
                 kubectl apply -f app-repo/service.yml
                 kubectl apply -f app-repo/hpa.yml
 
-                echo "✅ Deployment completed!"
+                echo "Deployment restart..."
+                DEPLOYMENT_NAME=$(kubectl get deploy -o jsonpath='{.items[0].metadata.name}')
+                kubectl rollout restart deployment $DEPLOYMENT_NAME
+
+                echo "Rollout bekleniyor..."
+                kubectl rollout status deployment/$DEPLOYMENT_NAME --timeout=360s
+
+                echo "Deploy tamamlandı!"

@@ -1,12 +1,10 @@
 resources:
-  # --- 1. Kaynak kod deposu (GitHub) ---
   - name: app-repo
     type: git
     source:
       uri: https://github.com/savaseeratesli/PipelineExamples.git
       branch: main
 
-  # --- 2. Docker image kaynağı ---
   - name: simple-image
     type: docker-image
     source:
@@ -16,11 +14,30 @@ resources:
       password: ((dockerhub_password))
 
 jobs:
-  # --- JOB 1: Docker image build + push ---
   - name: build-and-push
     plan:
       - get: app-repo
         trigger: true
+
+      - task: generate-tag
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source:
+              repository: alpine
+          outputs:
+            - name: tag-info
+          run:
+            path: sh
+            args:
+              - -exc
+              - |
+                TAG=$(date +%Y%m%d-%H%M%S)
+                echo $TAG > tag-info/tag.txt
+                echo "Tag oluşturuldu: $TAG"
+
       - put: simple-image
         params:
-          build: app-repo   # app-repo dizinindeki Dockerfile kullanılacak
+          build: app-repo
+          additional_tags: tag-info/tag.txt
